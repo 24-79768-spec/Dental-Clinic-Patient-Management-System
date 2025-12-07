@@ -1,40 +1,40 @@
 import sys
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication, QMessageBox, QDialog
+from model import DatabaseManager
+from view import LoginDialog, DentalClinicMainView
+from controller import AppController
 
-# Local Imports
-from controller import DentalClinicApp
-from view import LoginDialog
-
-if __name__ == '__main__':
-    # Fix for matplotlib/Qt conflict if using certain backends
-    plt.ion()
+def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    # Main loop for the application
+    model = DatabaseManager()
+
     while True:
-        # 1. Login attempt
-        login_dialog = LoginDialog()
+        login = LoginDialog()
+        def attempt_login():
+            username = login.username_input.text().strip()
+            password = login.password_input.text().strip()
+            if model.verify_user(username, password):
+                login.accept()
+            else:
+                QMessageBox.warning(login, "Login Failed", "Invalid username or password!")
+        login.login_btn.clicked.connect(attempt_login)
 
-        # Show the login dialog
-        if login_dialog.exec_() == QDialog.Accepted:
-            # 2. Login successful, start Main Application
-            window = DentalClinicApp()
-            window.show()
-
-            # Start the event loop for the main window
+        if login.exec_() == QDialog.Accepted:
+            main_view = DentalClinicMainView()
+            controller = AppController(model, main_view)
+            main_view.show()
             app.exec_()
-
-            # 3. Check if we need to restart (re-login)
-            if window.should_restart:
-                del window
+            if controller.should_restart:
                 continue
             else:
-                # Window closed via X button, exit
                 break
         else:
-            # Login cancelled or failed
             break
 
+    model.close()
     sys.exit(0)
+
+if __name__ == "__main__":
+    main()
